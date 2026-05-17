@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Plate Tracker 2026</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* CSS: Styles your mobile app layout */
+        body { font-family: sans-serif; margin: 0; background: #1a1a1a; color: white; }
+        #map-container { width: 100%; height: 40vh; background: #333; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #444; }
+        .state-btn { background: #444; color: white; border: 1px solid #555; padding: 10px 20px; margin: 5px; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        .state-btn.found { background: #2E7D32; border-color: #4CAF50; }
+        #detail-screen { padding: 20px; display: none; background: #222; min-height: 60vh; }
+        .btn-confirm { background: #4CAF50; color: white; border: none; padding: 15px; width: 100%; font-size: 1.2em; border-radius: 8px; margin-bottom: 20px; font-weight: bold; cursor: pointer; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .stat-box { background: #333; padding: 12px; border-radius: 6px; font-size: 0.9em; border: 1px solid #444; }
+        .tab-header { font-weight: bold; color: #4CAF50; margin-top: 20px; margin-bottom: 8px; border-bottom: 1px solid #444; padding-bottom: 4px; font-size: 1.1em; }
+    </style>
+</head>
+<body>
+
+<!-- 1. THE MAP PLACEHOLDER -->
+<div id="map-container">
+    <div style="text-align: center;">
+        <h3 style="color:#aaa; margin-bottom: 15px;">TAP A STATE TO TEST</h3>
+        <!-- Temporary buttons acting as your map elements until the full visual SVG map is linked -->
+        <button class="state-btn" id="btn-CO" onclick="selectState('CO')">Colorado</button>
+        <button class="state-btn" id="btn-TX" onclick="selectState('TX')">Texas</button>
+    </div>
+</div>
+
+<!-- 2. THE DYNAMIC STATE DETAIL SCREEN -->
+<div id="detail-screen">
+    <button class="btn-confirm" id="confirmBtn" onclick="markAsFound()">Mark as Spotted</button>
+    <h1 id="stateName" style="margin-top: 0;">Select a State</h1>
+    
+    <div class="stat-grid">
+        <div class="stat-box"><b>Capital:</b> <span id="capital">-</span></div>
+        <div class="stat-box"><b>Est. Income:</b> <span id="avgIncome">-</span></div>
+        <div class="stat-box"><b>Tax Rate:</b> <span id="taxRate">-</span></div>
+        <div class="stat-box"><b>Obesity:</b> <span id="obesity">-</span></div>
+    </div>
+
+    <div class="tab-header">JUSTICE & LAW</div>
+    <div style="font-size: 0.95em; line-height: 1.4;">
+        <p><b>Death Penalty:</b> <span id="deathPenalty">-</span></p>
+        <p><b>Murder Rate:</b> <span id="murder">-</span></p>
+        <p><b>Marijuana:</b> <span id="marijuana">-</span></p>
+    </div>
+
+    <div class="tab-header">SPORTS LANDSCAPE</div>
+    <ul id="sportsList" style="font-size:0.95em; padding-left:20px; line-height: 1.5;">
+        <!-- Sports data injected here -->
+    </ul>
+</div>
+
+<!-- 3. THE JAVASCRIPT ENGINE (Where your data lives) -->
+<script>
+const statesDatabase = {
+    "CO": {
+        name: "Colorado",
+        capital: "Denver",
+        obesity: "22.0% (Rank: 50th)",
+        avgIncome: "$82,254 (Rank: 11th)",
+        taxRate: "4.40% (Flat Rate)",
+        marijuanaStatus: "Legal (Recreational since 2012)",
+        murderRate: "5.8 per 100k (Rank: 24th)",
+        deathPenalty: "Abolished in 2020 (Last: Gary Lee Davis, 1997)",
+        sports: ["NHL: Colorado Avalanche (3 titles)", "NBA: Denver Nuggets (1 title)", "NFL: Denver Broncos (3 titles)", "MLB: Colorado Rockies (0 titles)"]
+    },
+    "TX": {
+        name: "Texas",
+        capital: "Austin",
+        obesity: "36.1% (Rank: 12th)",
+        avgIncome: "$67,422 (Rank: 26th)",
+        taxRate: "0.00% (No State Income Tax)",
+        marijuanaStatus: "Illegal (Fully prohibited)",
+        murderRate: "6.7 per 100k (Rank: 18th)",
+        deathPenalty: "Active (175 men / 6 women on death row)",
+        sports: ["NHL: Dallas Stars (1 title)", "NBA: Rockets (2), Spurs (5), Mavericks (1)", "NFL: Dallas Cowboys (5 titles)", "MLB: Astros (2), Rangers (1)"]
+    }
+};
+
+let currentState = "";
+let foundStatesList = JSON.parse(localStorage.getItem('foundStatesList')) || [];
+
+// Run this on startup to turn already-found state buttons green
+function initializeSavedStates() {
+    foundStatesList.forEach(stateCode => {
+        const btn = document.getElementById(`btn-${stateCode}`);
+        if (btn) btn.classList.add('found');
+    });
+}
+
+function selectState(stateCode) {
+    currentState = stateCode;
+    const data = statesDatabase[stateCode];
+    if (!data) return;
+
+    // Show the detail dashboard container
+    document.getElementById("detail-screen").style.display = "block";
+
+    // Inject text directly into the HTML placeholders
+    document.getElementById("stateName").innerText = data.name;
+    document.getElementById("capital").innerText = data.capital;
+    document.getElementById("avgIncome").innerText = data.avgIncome;
+    document.getElementById("taxRate").innerText = data.taxRate;
+    document.getElementById("obesity").innerText = data.obesity;
+    document.getElementById("deathPenalty").innerText = data.deathPenalty;
+    document.getElementById("murder").innerText = data.murderRate;
+    document.getElementById("marijuana").innerText = data.marijuanaStatus;
+
+    // Clear and build the sports list dynamically
+    const sportsUl = document.getElementById("sportsList");
+    sportsUl.innerHTML = "";
+    data.sports.forEach(item => {
+        let li = document.createElement("li");
+        li.innerText = item;
+        sportsUl.appendChild(li);
+    });
+    
+    // Manage Confirmation Button state look
+    updateButtonUI();
+    
+    // Smooth scroll down to the stats display on mobile viewports
+    document.getElementById("detail-screen").scrollIntoView({ behavior: 'smooth' });
+}
+
+function markAsFound() {
+    if (!currentState) return;
+    
+    if (!foundStatesList.includes(currentState)) {
+        foundStatesList.push(currentState);
+        localStorage.setItem('foundStatesList', JSON.stringify(foundStatesList));
+        
+        // Change button layout state instantly
+        updateButtonUI();
+        
+        // Turn the button/element green up in the map dashboard area
+        const mapBtn = document.getElementById(`btn-${currentState}`);
+        if (mapBtn) mapBtn.classList.add('found');
+    }
+}
+
+function updateButtonUI() {
+    const btn = document.getElementById("confirmBtn");
+    if (foundStatesList.includes(currentState)) {
+        btn.innerText = "✅ SPOTTED!";
+        btn.style.background = "#2E7D32";
+    } else {
+        btn.innerText = "Mark as Spotted";
+        btn.style.background = "#4CAF50";
+    }
+}
+
+// Fire data tracking checks when loaded onto your screen
+initializeSavedStates();
+</script>
+
+</body>
+</html>
